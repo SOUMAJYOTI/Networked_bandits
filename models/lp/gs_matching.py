@@ -46,7 +46,7 @@ def model_gs_matching(u_b, u_l, c, q, obj_util, lambda_1, lambda_2, LogToConsole
     model.optimize()
     if model.status != 2:
         print("Optimal Solution not found !!!")
-        return -1, -1
+        return -1, -1, -1
 
     borrower_matches = {}
     lender_matches = {}
