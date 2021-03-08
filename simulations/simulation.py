@@ -6,7 +6,7 @@ def simulate_lending():
     u_b = {}
     u_l = {}
 
-    n_b, n_l = 3, 6
+    n_b, n_l = 20, 60
 
     preference_borrowers = []
     preference_lenders = []

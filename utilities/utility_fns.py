@@ -74,3 +74,21 @@ def print_cb_arms(cb_arms):
     for l_idx in cb_arms:
         for b_idx in cb_arms[l_idx]:
             print(l_idx, b_idx, cb_arms[l_idx][b_idx]['lb'], cb_arms[l_idx][b_idx]['ub'])
+
+
+def is_early_matching_valid(lenders_list, borrowers_list, cb_arms, lender_id, borrower_id):
+    # Criterion 1
+    for l_idx in lenders_list:
+        if l_idx == lender_id:
+            continue
+        if cb_arms[l_idx][borrower_id]['ub'] >= cb_arms[lender_id][borrower_id]['lb']:
+            return False
+
+    # Criterion 2
+    for b_idx in borrowers_list:
+        if borrower_id == b_idx:
+            continue
+        if cb_arms[lender_id][b_idx]['ub'] >= cb_arms[lender_id][borrower_id]['lb']:
+            return False
+
+    return True
