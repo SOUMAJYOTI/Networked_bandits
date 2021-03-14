@@ -1,10 +1,7 @@
 from collections import defaultdict
 from models.lp.gs_matching import *
 from utilities.utility_fns import *
-
-VARIANCE = 1.0
-NUM_SIMS_PER_STEP = 50
-
+import copy
 
 def gs_bandit_method_baseline(u_b, u_l, c, q, lambda_1, lambda_2):
     u = defaultdict(lambda: defaultdict(float))
@@ -25,48 +22,51 @@ def gs_bandit_method_baseline(u_b, u_l, c, q, lambda_1, lambda_2):
     return borrower_matches_optimal, lender_matches_optimal, objVal
 
 
-def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrowers, preference_lenders):
-    T = 40  # horizon, n
-
-    rewards_list_l = defaultdict(lambda: defaultdict(list))
-    util_send_l = defaultdict(lambda: defaultdict(float))
+def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrowers, preference_lenders,
+                           NUM_SIMS_PER_STEP, T, rewards_from_borrower, VARIANCE):
+    util_send_l_orig = defaultdict(lambda: defaultdict(float))
 
     # For each lender l, initialize the current utility for a borrower b as u_l(b)
     # and then initilize the util_send list for matching with the current utility
     for l_idx in q:
         for b_idx in c:
-            util_send_l[l_idx][b_idx] = average_reward(u_l[l_idx][b_idx], rewards_list_l[l_idx][b_idx])
+            util_send_l_orig[l_idx][b_idx] = average_reward(u_l[l_idx][b_idx], [])
 
     # Baseline GS
     lender_matches_optimal = []
     while len(lender_matches_optimal) < len(q):
         borrower_matches_optimal, lender_matches_optimal, objVal_optimal = gs_bandit_method_baseline(u_b, u_l, c, q,
                                                                                                      lambda_1, lambda_2)
-
     regret_lender_t = defaultdict(lambda: defaultdict(list))
 
     for s_idx in range(NUM_SIMS_PER_STEP):
-        # print("Simulation no.: " + str(s_idx))
+        print("Simulation no.: " + str(s_idx))
+
+        util_send_l = copy.deepcopy(util_send_l_orig)
+        rewards_list_l = defaultdict(lambda: defaultdict(list))
+
         for t in range(1, T + 1):
             # print("Matching time step " + str(t))
             borrower_matches, lender_matches, objVal = model_gs_matching(u_b, util_send_l, c, q, util_send_l,
                                                                          lambda_1, lambda_2, LogToConsole=False)
-            #             if borrower_matches == -1 or lender_matches == -1:
-            #                 print("Non-optimal lending")
-            #                 for l_idx in range(1, n_l+1):
-            #                     regret_lender_t[l_idx].append(-1)
-            #                 continue
+
+            if borrower_matches == -1:
+                for l_idx in q:
+                    r = regret_lender_t[l_idx][t - 1][s_idx]
+                    regret_lender_t[l_idx][t].append(r)
+                continue
 
             for l_idx in q:
                 if l_idx in lender_matches:
                     b_match = lender_matches[l_idx]  # matched borrower
                     rewards_list_l[l_idx][b_match].append(
-                        rewards(u_l[l_idx][b_match] + u_b[b_match][l_idx],
-                                VARIANCE))  # update the reward list for l-b pair
+                        rewards(u_l[l_idx][b_match],
+                                VARIANCE) + rewards_from_borrower[s_idx][l_idx][b_match][t-1])  # update the reward list for l-b pair
                     util_send_l[l_idx][b_match] = reward_ucb(u_l[l_idx][b_match], rewards_list_l[l_idx][b_match], t)
 
                     # print(lender_matches_optimal[l_idx], b_match)
                     r = u_l[l_idx][lender_matches_optimal[l_idx]] - u_l[l_idx][b_match]
+                    # print(s_idx, t, lender_matches_optimal[l_idx], b_match, r)
                 else:
                     r = regret_lender_t[l_idx][t - 1][s_idx]
 
@@ -77,19 +77,20 @@ def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrow
     return regret_lender_t, borrower_matches, lender_matches, objVal
 
 
-def gs_bandit_phases(u_b, u_l, c, q, lambda_1, lambda_2):
-    T = 10  # horizon, n
+def gs_bandit_BLEMET(u_b, u_l, c, q, lambda_1, lambda_2, NUM_SIMS_PER_STEP, T, rewards_from_borrower, VARIANCE):
 
-    rewards_list_l = defaultdict(lambda: defaultdict(list))
-    util_send_l = defaultdict(lambda: defaultdict(float))
-    util_send_b = defaultdict(lambda: defaultdict(float))
+    util_send_l_orig = defaultdict(lambda: defaultdict(float))
+    util_send_b_orig = defaultdict(lambda: defaultdict(float))
+
+    borrower_final_matches = defaultdict(list)
+    lender_final_matches = defaultdict(int)
 
     # For each lender l, initialize the current utility for a borrower b as u_l(b)
     # and then initilize the util_send list for matching with the current utility
     for l_idx in q:
         for b_idx in c:
-            util_send_l[l_idx][b_idx] = reward_ucb(u_l[l_idx][b_idx], [], 0)
-            util_send_b[b_idx][l_idx] = u_b[b_idx][l_idx]
+            util_send_l_orig[l_idx][b_idx] = reward_ucb(u_l[l_idx][b_idx], [], 0)
+            util_send_b_orig[b_idx][l_idx] = u_b[b_idx][l_idx]
 
     # Baseline GS
     lender_matches_optimal = []
@@ -100,27 +101,43 @@ def gs_bandit_phases(u_b, u_l, c, q, lambda_1, lambda_2):
     regret_lender_t = defaultdict(lambda: defaultdict(list))
 
     for s_idx in range(NUM_SIMS_PER_STEP):
-        # print("Simulation no.: " + str(s_idx))
+        print("Simulation no.: " + str(s_idx))
+        q_curr = copy.deepcopy(q)
+        c_curr = copy.deepcopy(c)
+
+        u_l_curr = copy.deepcopy(u_l)
+        util_send_l = copy.deepcopy(util_send_l_orig)
+        util_send_b = copy.deepcopy(util_send_b_orig)
+        rewards_list_l = defaultdict(lambda: defaultdict(list))
+
+        lenders_unmatched = list(q_curr.keys())
+        borrowers_unmatched = list(c_curr.keys())
+
+        cb_arms = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+
+        # Initialize the lcb and the ucb for all the arms for each lender
+        for l_idx in q:
+            for b_idx in c:
+                cb_arms[l_idx][b_idx]['lb'], cb_arms[l_idx][b_idx]['ub'] = compute_cb_arms(u_l[l_idx][b_idx], [], 0)
+
+        # for lb in u_l:
+        #     max_ub = -1
+        #     for b_idx in u_b:
+        #         if cb_arms[lb][b_idx]['ub'] > max_ub:
+        #             max_ub = cb_arms[lb][b_idx]['ub']
+        #             bstart = b_idx
+        #
+        #     regret_lender_t[lb][0].append(u_l[lb][lender_matches_optimal[lb]] - u_l[lb][bstart])
+
         for t in range(1, T + 1):
             # print("Matching time step " + str(t))
-            q_curr = q.copy()
-            c_curr = c.copy()
-            lenders_unmatched = list(q_curr.keys())
-            borrowers_unmatched = list(c_curr.keys())
+            # print(t, lenders_unmatched, borrowers_unmatched)
+            if len(lenders_unmatched) == 0 or len(borrowers_unmatched) == 0:
+                break
 
-            # Proceed in phases
-            cb_arms = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
-
-            # Initialize the lcb and the ucb for all the arms for each lender
-            for l_idx in q:
-                for b_idx in c:
-                    cb_arms[l_idx][b_idx]['lb'], cb_arms[l_idx][b_idx]['ub'] = compute_cb_arms(u_l[l_idx][b_idx], [], 0)
-
-            # print_cb_arms(cb_arms)
             borrower_matches, lender_matches, objVal = model_gs_matching(util_send_b, util_send_l, c_curr, q_curr,
                                                                          util_send_l,
                                                                          lambda_1, lambda_2, LogToConsole=False)
-
             if borrower_matches == -1:
                 break
 
@@ -128,44 +145,69 @@ def gs_bandit_phases(u_b, u_l, c, q, lambda_1, lambda_2):
             borrowers_to_remove = []
 
             for b_idx in borrower_matches:
-                lenders_b = borrower_matches[b_idx]
+                lenders_b = borrower_matches[b_idx] # lender matches list for b_idx
 
                 for lb in lenders_b:
                     if is_early_matching_valid(lenders_b, borrowers_unmatched, cb_arms, lb, b_idx):
                         lenders_to_remove.append(lb)
                         c_curr[b_idx] -= q_curr[lb]
 
-                    # update the confidence intervals for b_idx, lb
-                    cb_arms[lb][b_idx]['lb'], cb_arms[lb][b_idx]['ub'] = compute_cb_arms(u_l[lb][b_idx],
-                                                                                         rewards_list_l[lb][b_idx], t)
-
                     # update the regret with lb-->b_idx match
-                    regret_lender_t[lb][t].append(u_l[lb][lender_matches_optimal[lb]] - u_l[lb][b_idx])
+                    regret_lender_t[lb][t].append(util_send_l[lb][lender_matches_optimal[lb]] - util_send_l[lb][b_idx])
+                    # print(s_idx, t, lb, lender_matches_optimal[lb], b_idx, util_send_l[lb][lender_matches_optimal[lb]] - util_send_l[lb][b_idx])
 
                     # update the utilities for preferences for agents
                     rewards_list_l[lb][b_idx].append(
-                        rewards(u_l[lb][b_idx] + u_b[b_idx][lb],
-                                VARIANCE))  # update the reward list for l-b pair
-                    util_send_l[lb][b_idx] = reward_ucb(u_l[lb][b_idx], rewards_list_l[lb][b_idx], t)
+                        rewards(util_send_l[lb][b_idx],
+                                VARIANCE) + rewards_from_borrower[s_idx][lb][b_idx][t-1]) # update the reward list for l-b pair
+
+                    # update the utilities for next round
+                    # util_send_l[lb][b_idx] = reward_ucb(util_send_l[lb][b_idx], rewards_list_l[lb][b_idx], t)
+                    #
+                    # # update the confidence intervals for b_idx, lb
+                    # cb_arms[lb][b_idx]['lb'], cb_arms[lb][b_idx]['ub'] = compute_cb_arms(util_send_l[lb][b_idx],
+                    #                                                                            rewards_list_l[lb][b_idx], t)
 
                 if c_curr[b_idx] <= 0:
                     # print("Borrower ", b_match, " removed")
                     borrowers_to_remove.append(b_idx)
 
-                for lr in list(set(lenders_to_remove)):
-                    lenders_unmatched.remove(lr)
+            for lr in list(set(lenders_to_remove)):
+                # print(t, lr)
+                bm = lender_matches[lr]
+                borrower_final_matches[bm].append(lr)
+                lender_final_matches[lr] = bm
+                lenders_unmatched.remove(lr)
 
-                for br in list(set(borrowers_to_remove)):
-                    borrowers_unmatched.remove(br)
+                # fill the remaining t's as same regret as now for lr
+                for t_left in range(t+1, T):
+                    regret_lender_t[lr][t_left].append(regret_lender_t[lr][t][-1])
 
-                # print(lenders_unmatched)
-                # Revise the lender investments dict
-                q_curr = revise_agent_dict(q_curr, lenders_unmatched)
-                # Revise the borrower requests dict
-                c_curr = revise_agent_dict(c_curr, borrowers_unmatched)
+            for br in list(set(borrowers_to_remove)):
+                borrowers_unmatched.remove(br)
 
-                # Revise the borrower and lenders utility dicts
-                util_send_l = revise_lb_dict(util_send_l, lenders_unmatched, borrowers_unmatched)
-                util_send_b = revise_lb_dict(util_send_b, borrowers_unmatched, lenders_unmatched)
+            # Revise the lender investments dict
+            q_curr = revise_agent_dict(q_curr, lenders_unmatched)
+            # Revise the borrower requests dict
+            c_curr = revise_agent_dict(c_curr, borrowers_unmatched)
 
-    return regret_lender_t, borrower_matches, lender_matches, objVal
+            # revise the estimates of the lender utility based on current market situation
+            for l_idx in lenders_unmatched:
+                for b_idx in borrowers_unmatched:
+                    diff = np.max([c_curr[b_idx] - q_curr[l_idx], 0.001])
+                    # diff = c_curr[b_idx] - q_curr[l_idx]
+                    chance = 1.0 - np.exp(-0.5 * diff)
+                    u_l_curr[l_idx][b_idx] = u_l[l_idx][b_idx] * chance
+
+                    # update the utilities for next round
+                    util_send_l[l_idx][b_idx] = reward_ucb(u_l_curr[l_idx][b_idx], rewards_list_l[l_idx][b_idx], t)
+
+                    # update the confidence intervals for b_idx, lb
+                    cb_arms[l_idx][b_idx]['lb'], cb_arms[l_idx][b_idx]['ub'] = compute_cb_arms(u_l_curr[l_idx][b_idx],
+                                                                                         rewards_list_l[l_idx][b_idx], t)
+
+            # Revise the borrower and lenders utility dicts
+            util_send_l = revise_util_dict(util_send_l, lenders_unmatched, borrowers_unmatched)
+            util_send_b = revise_util_dict(util_send_b, borrowers_unmatched, lenders_unmatched)
+
+    return regret_lender_t, borrower_final_matches, lender_final_matches, objVal

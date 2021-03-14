@@ -6,7 +6,7 @@ def simulate_lending():
     u_b = {}
     u_l = {}
 
-    n_b, n_l = 20, 60
+    n_b, n_l = 10, 60
 
     preference_borrowers = []
     preference_lenders = []
@@ -19,7 +19,7 @@ def simulate_lending():
 
     borrower_rates = {}
     for b_idx in range(1, n_b + 1):
-        borrower_rates[b_idx] = random.uniform(0, 1)
+        borrower_rates[b_idx] = random.uniform(0.1, 0.5)   # consider fixed for now, later random.uniform(0, 1)
 
     # This part is not used for now - risk_preference
     risk_preference = {}
@@ -44,13 +44,14 @@ def simulate_lending():
         sum_c = 0
         sum_q = 0
         for b_idx in range(1, n_b + 1):
-            c[b_idx] = random.sample(range(5, 40), 1)[0]
+            c[b_idx] = random.sample(range(10, 50), 1)[0]
             sum_c += c[b_idx]
 
         for l_idx in range(1, n_l + 1):
-            q[l_idx] = random.sample(range(1, 10), 1)[0]
+            q[l_idx] = random.sample(range(1, 30), 1)[0]
             sum_q += q[l_idx]
 
+        print(sum_q, sum_c)
         if sum_q > sum_c:
             break
 
