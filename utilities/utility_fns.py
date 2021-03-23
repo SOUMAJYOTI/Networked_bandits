@@ -1,17 +1,25 @@
 import numpy as np
 from collections import defaultdict
 
-INFTY = 0.5
-
+INFTY = 1.0
 
 def lender_utility(l, b, sim_values, amount_lenders, borrower_rates):
-    return sim_values[b][l]  # + borrower_rates[b]*amount_lenders[l]
-
+    print((borrower_rates[b]*amount_lenders[l]) / 30)
+    return (borrower_rates[b]*amount_lenders[l]) / 30 #sim_values[b][l] #
 
 # Risk preference not considered for now
 def borrower_utility(l, b, sim_values, risk_preference):
     return (sim_values[b][l] + risk_preference[b][l]) / 2.0  # 2.0 is for normalization
 
+def get_rewards_list_start(n_l, n_b, u_b, num_sims_per_step, T, variance):
+    rewards_from_borrower = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for s_idx in range(num_sims_per_step):
+        for t in range(T):
+            for l_idx in range(1, n_l+1):
+                for b_idx in range(1, n_b+1):
+                    rewards_from_borrower[s_idx][l_idx][b_idx].append(np.random.normal(u_b[b_idx][l_idx], variance, 1)[0])
+
+    return rewards_from_borrower
 
 def rewards(mean, variance):
     return np.random.normal(mean, variance, 1)[0]
@@ -56,11 +64,12 @@ def equal_distribution_utility():
     raise NotImplementedError("Utilities not implemented")
 
 
-def revise_lb_dict(orig_dict, agents_from, agents_to):
+def revise_util_dict(orig_dict, agents_from, agents_to):
     new_dict = defaultdict(lambda: defaultdict(float))
     for af in agents_from:
         for at in agents_to:
             new_dict[af][at] = orig_dict[af][at]
+    return new_dict
 
 
 def revise_agent_dict(orig_dict, agents):

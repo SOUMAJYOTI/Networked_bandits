@@ -77,7 +77,8 @@ def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrow
     return regret_lender_t, borrower_matches, lender_matches, objVal
 
 
-def gs_bandit_BLEMET(u_b, u_l, c, q, lambda_1, lambda_2, NUM_SIMS_PER_STEP, T, rewards_from_borrower, VARIANCE):
+def gs_bandit_BLEMET(u_b, u_l, c, q, lambda_1, lambda_2, lambda_3,
+                     NUM_SIMS_PER_STEP, T, rewards_from_borrower, with_fairness=False, VARIANCE=1.0):
 
     util_send_l_orig = defaultdict(lambda: defaultdict(float))
     util_send_b_orig = defaultdict(lambda: defaultdict(float))
@@ -135,9 +136,23 @@ def gs_bandit_BLEMET(u_b, u_l, c, q, lambda_1, lambda_2, NUM_SIMS_PER_STEP, T, r
             if len(lenders_unmatched) == 0 or len(borrowers_unmatched) == 0:
                 break
 
-            borrower_matches, lender_matches, objVal = model_gs_matching(util_send_b, util_send_l, c_curr, q_curr,
-                                                                         util_send_l,
-                                                                         lambda_1, lambda_2, LogToConsole=False)
+            # Find the maximum remaining amount among all borrowers
+            b_rem_max = -10
+            for b_idx in borrowers_unmatched:
+                if c_curr[b_idx] > b_rem_max:
+                    b_rem_max = c_curr[b_idx]
+
+            fair_constr = b_rem_max * np.exp((t/T))
+            if with_fairness:
+                borrower_matches, lender_matches, objVal = model_gs_matching_with_fairness(util_send_b, util_send_l,
+                                                                                           c_curr, q_curr,
+                                                                                           util_send_l, fair_constr,
+                                                                                           lambda_1, lambda_2, lambda_3,
+                                                                                           LogToConsole=False)
+            else:
+                borrower_matches, lender_matches, objVal = model_gs_matching(util_send_b, util_send_l, c_curr, q_curr,
+                                                                             util_send_l,
+                                                                             lambda_1, lambda_2, LogToConsole=False)
             if borrower_matches == -1:
                 break
 
@@ -153,7 +168,9 @@ def gs_bandit_BLEMET(u_b, u_l, c, q, lambda_1, lambda_2, NUM_SIMS_PER_STEP, T, r
                         c_curr[b_idx] -= q_curr[lb]
 
                     # update the regret with lb-->b_idx match
-                    regret_lender_t[lb][t].append(util_send_l[lb][lender_matches_optimal[lb]] - util_send_l[lb][b_idx])
+                    regret_lender_t[lb][t].append(u_l[lb][lender_matches_optimal[lb]] - u_l[lb][b_idx])
+                    # print(util_send_l[lb][lender_matches_optimal[lb]],
+                    #       util_send_l[lb][b_idx], util_send_l[lb][lender_matches_optimal[lb]] - util_send_l[lb][b_idx])
                     # print(s_idx, t, lb, lender_matches_optimal[lb], b_idx, util_send_l[lb][lender_matches_optimal[lb]] - util_send_l[lb][b_idx])
 
                     # update the utilities for preferences for agents
