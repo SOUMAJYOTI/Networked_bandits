@@ -15,7 +15,7 @@ def simulate_lending():
     for b_idx in range(1, n_b + 1):
         sim_values[b_idx] = {}
         for l_idx in range(1, n_l + 1):
-            sim_values[b_idx][l_idx] = random.uniform(0, 1)
+            sim_values[b_idx][l_idx] = random.uniform(0, 0.5)
 
     borrower_rates = {}
     for b_idx in range(1, n_b + 1):
@@ -28,7 +28,7 @@ def simulate_lending():
     for l_idx in range(1, n_l + 1):
         lender_risk_categories[l_idx] = {}
         for c_idx in categories:
-            lender_risk_categories[l_idx][c_idx] = random.uniform(0, 1)
+            lender_risk_categories[l_idx][c_idx] = random.uniform(0, 0.5)
     borrower_categories = {}
     for b_idx in range(1, n_b + 1):
         borrower_categories[b_idx] = random.sample(categories, 1)[0]  # consider every borrower has 1 category for now
@@ -69,11 +69,11 @@ def simulate_lending():
         preference_lenders = sorted(range(1, len(u_l[l_idx]) + 1), key=lambda k: u_l[l_idx][k])
 
     lambda_1 = 0.5
-    lambda_2 = 0.25
+    lambda_2 = 0.5
     lambda_3 = 1 - (lambda_1 + lambda_2)
 
-    if lambda_3 < 0:
-        raise ValueError("Lambda_3 cannot be less than 0")
+    # if lambda_3 < 0:
+    #     raise ValueError("Lambda_3 cannot be less than 0")
 
     print("Configuration:")
     print("Borrower preferences: ", u_b)

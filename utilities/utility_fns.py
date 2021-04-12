@@ -1,10 +1,9 @@
 import numpy as np
 from collections import defaultdict
 
-INFTY = 1.0
+INFTY = 10.0
 
 def lender_utility(l, b, sim_values, amount_lenders, borrower_rates):
-    print((borrower_rates[b]*amount_lenders[l]) / 30)
     return (borrower_rates[b]*amount_lenders[l]) / 30 #sim_values[b][l] #
 
 # Risk preference not considered for now
@@ -17,34 +16,41 @@ def get_rewards_list_start(n_l, n_b, u_b, num_sims_per_step, T, variance):
         for t in range(T):
             for l_idx in range(1, n_l+1):
                 for b_idx in range(1, n_b+1):
-                    rewards_from_borrower[s_idx][l_idx][b_idx].append(np.random.normal(u_b[b_idx][l_idx], variance, 1)[0])
+                    sampled_reward = max(0.001, np.random.normal(u_b[b_idx][l_idx], variance, 1)[0])
+                    rewards_from_borrower[s_idx][l_idx][b_idx].append(sampled_reward)
 
     return rewards_from_borrower
+
 
 def rewards(mean, variance):
     return np.random.normal(mean, variance, 1)[0]
 
 
-def average_reward(base_reward, rewards_list):
+def reward_ucb(rewards_list, time):
     if len(rewards_list) == 0:
-        return base_reward
+        return INFTY
     else:
-        return (base_reward + np.sum(rewards_list)) / (len(rewards_list) + 1)
+        # print(np.mean(rewards_list), (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list))))
+        return np.mean(rewards_list) + (np.sqrt(.5 * np.log(time + 1) / len(rewards_list)))
 
 
-def reward_ucb(base_reward, rewards_list, time):
-    if len(rewards_list) == 0:
-        return average_reward(base_reward, rewards_list) + INFTY
-    else:
-        return average_reward(base_reward, rewards_list) + (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list)))
+def sum_regrets(regret):
+    regret_sum_t = defaultdict(lambda: defaultdict(float))
+
+    for l in regret:
+        for t in regret[l]:
+            for s in range(len(regret[l][t])):
+                regret_sum_t[t][s] += regret[l][t][s]
+
+    return regret_sum_t
 
 
-def compute_cb_arms(base_reward, rewards_list, time):
+def compute_cb_arms(rewards_list, time):
     if len(rewards_list) > 0:
-        return average_reward(base_reward, rewards_list) - (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list))), \
-               average_reward(base_reward, rewards_list) + (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list)))
+        return np.mean(rewards_list) - (np.sqrt(.5 * np.log(time + 1) / len(rewards_list))), \
+               np.mean(rewards_list) + (np.sqrt(.5 * np.log(time + 1) / len(rewards_list)))
     else:
-        return average_reward(base_reward, rewards_list) - INFTY, average_reward(base_reward, rewards_list) + INFTY
+        return -INFTY, INFTY
 
 
 def find_interescting_arms(intervals_arms, b):
@@ -90,14 +96,17 @@ def is_early_matching_valid(lenders_list, borrowers_list, cb_arms, lender_id, bo
     for l_idx in lenders_list:
         if l_idx == lender_id:
             continue
-        if cb_arms[l_idx][borrower_id]['ub'] >= cb_arms[lender_id][borrower_id]['lb']:
+        # print(cb_arms[l_idx][borrower_id]['ub'], cb_arms[lender_id][borrower_id]['lb'])
+        if cb_arms[l_idx][borrower_id]['ub'] >= 1.5*cb_arms[lender_id][borrower_id]['lb']:
             return False
 
     # Criterion 2
     for b_idx in borrowers_list:
         if borrower_id == b_idx:
             continue
-        if cb_arms[lender_id][b_idx]['ub'] >= cb_arms[lender_id][borrower_id]['lb']:
+        # print(cb_arms[lender_id][b_idx]['ub'], cb_arms[lender_id][borrower_id]['lb'])
+        if cb_arms[lender_id][b_idx]['ub'] >= 1.5*cb_arms[lender_id][borrower_id]['lb']:
             return False
 
+    # print("----------------------------------------")
     return True
