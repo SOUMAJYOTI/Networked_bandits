@@ -31,7 +31,7 @@ def reward_ucb(rewards_list, time):
         return INFTY
     else:
         # print(np.mean(rewards_list), (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list))))
-        return np.mean(rewards_list) + (np.sqrt(.5 * np.log(time + 1) / len(rewards_list)))
+        return np.mean(rewards_list) + (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list)))
 
 
 def sum_regrets(regret):
@@ -44,11 +44,26 @@ def sum_regrets(regret):
 
     return regret_sum_t
 
+def max_regrets(regret):
+    regret_max_t = defaultdict(lambda: defaultdict(float))
+
+    for l in regret:
+        for t in regret[l]:
+            for s in range(len(regret[l][t])):
+                regret_max_t[t][s] = -10
+
+    for l in regret:
+        for t in regret[l]:
+            for s in range(len(regret[l][t])):
+                if regret[l][t][s] > regret_max_t[t][s]:
+                    regret_max_t[t][s] = regret[l][t][s]
+
+    return regret_max_t
 
 def compute_cb_arms(rewards_list, time):
     if len(rewards_list) > 0:
-        return np.mean(rewards_list) - (np.sqrt(.5 * np.log(time + 1) / len(rewards_list))), \
-               np.mean(rewards_list) + (np.sqrt(.5 * np.log(time + 1) / len(rewards_list)))
+        return np.mean(rewards_list) - (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list))), \
+               np.mean(rewards_list) + (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list)))
     else:
         return -INFTY, INFTY
 

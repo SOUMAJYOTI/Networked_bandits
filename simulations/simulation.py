@@ -68,12 +68,6 @@ def simulate_lending():
             u_l[l_idx][b_idx] = lender_utility(l_idx, b_idx, sim_values, q, borrower_rates)
         preference_lenders = sorted(range(1, len(u_l[l_idx]) + 1), key=lambda k: u_l[l_idx][k])
 
-    lambda_1 = 0.5
-    lambda_2 = 0.5
-    lambda_3 = 1 - (lambda_1 + lambda_2)
-
-    # if lambda_3 < 0:
-    #     raise ValueError("Lambda_3 cannot be less than 0")
 
     print("Configuration:")
     print("Borrower preferences: ", u_b)
@@ -81,4 +75,4 @@ def simulate_lending():
     print("Lender preferences: ", u_l)
     print("Lender budgets: ", q)
 
-    return u_b, u_l, c, q, lambda_1, lambda_2, lambda_3, preference_borrowers, preference_lenders
+    return u_b, u_l, c, q, preference_borrowers, preference_lenders
