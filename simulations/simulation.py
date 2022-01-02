@@ -6,7 +6,7 @@ def simulate_lending():
     u_b = {}
     u_l = {}
 
-    n_b, n_l = 20, 60
+    n_b, n_l = 5, 10
 
     preference_borrowers = []
     preference_lenders = []
@@ -67,7 +67,6 @@ def simulate_lending():
         for b_idx in range(1, n_b + 1):
             u_l[l_idx][b_idx] = lender_utility(l_idx, b_idx, sim_values, q, borrower_rates)
         preference_lenders = sorted(range(1, len(u_l[l_idx]) + 1), key=lambda k: u_l[l_idx][k])
-
 
     print("Configuration:")
     print("Borrower preferences: ", u_b)

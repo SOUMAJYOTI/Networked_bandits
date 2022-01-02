@@ -3,12 +3,15 @@ from collections import defaultdict
 
 INFTY = 10.0
 
+
 def lender_utility(l, b, sim_values, amount_lenders, borrower_rates):
     return (borrower_rates[b]*amount_lenders[l]) / 30 #sim_values[b][l] #
+
 
 # Risk preference not considered for now
 def borrower_utility(l, b, sim_values, risk_preference):
     return (sim_values[b][l] + risk_preference[b][l]) / 2.0  # 2.0 is for normalization
+
 
 def get_rewards_list_start(n_l, n_b, u_b, num_sims_per_step, T, variance):
     rewards_from_borrower = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -26,12 +29,20 @@ def rewards(mean, variance):
     return np.random.normal(mean, variance, 1)[0]
 
 
+def beta_subgaussian_rewards(mean, variance):
+    return np.random.normal(mean, variance, 1)[0]
+
+
+def lipschitz_functions():
+    raise NotImplementedError
+
+
 def reward_ucb(rewards_list, time):
     if len(rewards_list) == 0:
         return INFTY
     else:
         # print(np.mean(rewards_list), (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list))))
-        return np.mean(rewards_list) + (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list)))
+        return np.mean(rewards_list) + (np.sqrt(0.5 * np.log(time + 1) / len(rewards_list)))
 
 
 def sum_regrets(regret):
@@ -43,6 +54,7 @@ def sum_regrets(regret):
                 regret_sum_t[t][s] += regret[l][t][s]
 
     return regret_sum_t
+
 
 def max_regrets(regret):
     regret_max_t = defaultdict(lambda: defaultdict(float))
@@ -60,10 +72,11 @@ def max_regrets(regret):
 
     return regret_max_t
 
+
 def compute_cb_arms(rewards_list, time):
     if len(rewards_list) > 0:
-        return np.mean(rewards_list) - (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list))), \
-               np.mean(rewards_list) + (np.sqrt(1.5 * np.log(time + 1) / len(rewards_list)))
+        return np.mean(rewards_list) - (np.sqrt(0.5 * np.log(time + 1) / len(rewards_list))), \
+               np.mean(rewards_list) + (np.sqrt(0.5 * np.log(time + 1) / len(rewards_list)))
     else:
         return -INFTY, INFTY
 
@@ -125,3 +138,15 @@ def is_early_matching_valid(lenders_list, borrowers_list, cb_arms, lender_id, bo
 
     # print("----------------------------------------")
     return True
+
+
+def get_borrower_regret(optimal_lenders, matched_lenders, u_b):
+    sum_optimal_u: int = 0
+    sum_matched_u: int = 0
+    for ol in optimal_lenders:
+        sum_optimal_u += u_b[ol]
+
+    for ml in matched_lenders:
+        sum_matched_u += u_b[ml]
+
+    return sum_optimal_u - sum_matched_u
