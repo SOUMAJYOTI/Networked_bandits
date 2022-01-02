@@ -51,7 +51,7 @@ def simulate_lending():
             q[l_idx] = random.sample(range(1, 30), 1)[0]
             sum_q += q[l_idx]
 
-        print(sum_q, sum_c)
+        # print(sum_q, sum_c)
         if sum_q > sum_c:
             break
 

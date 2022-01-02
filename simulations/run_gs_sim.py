@@ -5,7 +5,7 @@ import os
 import dill
 
 VARIANCE = 1.0
-NUM_SIMS_PER_STEP = 2
+NUM_SIMS_PER_STEP = 1
 T = 10 # horizon, n
 SAVE_DIR = "../figures/figure_12_29_0p5_var1/20b_60l"
 

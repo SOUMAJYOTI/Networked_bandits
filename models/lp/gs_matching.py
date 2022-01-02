@@ -79,8 +79,8 @@ def model_gs_matching_manytomany(u_b, u_l, c, q, obj_util, lambda_1, lambda_2, L
             x[b_idx][l_idx] = model.addVar(lb=0.0, ub=1.0, vtype=GRB.CONTINUOUS, name=x_name)
             w_name = "w_{}_{}".format(b_idx, l_idx)
             w[b_idx][l_idx] = model.addVar(lb=0.0, ub=1.0, vtype=GRB.BINARY, name=w_name)
-            slack_name = "sl_{}_{}".format(b_idx, l_idx)
-            sl[b_idx][l_idx] = model.addVar(lb=1e-5, ub=1.0, vtype=GRB.CONTINUOUS, name=slack_name)
+    slack_name = "s_{}_{}"#.format(b_idx, l_idx)
+    sl = model.addVar(lb=0.0001, ub=1.0, vtype=GRB.CONTINUOUS, name=slack_name)
 
     for l_idx in q:
         model.addConstr(quicksum(x[b_idx][l_idx] for b_idx in c) <= 1)
@@ -98,7 +98,7 @@ def model_gs_matching_manytomany(u_b, u_l, c, q, obj_util, lambda_1, lambda_2, L
                 if b_idx != b_idx_2:
                     if u_l[l_idx][b_idx] < u_l[l_idx][b_idx_2]:
                         constr_obj_2 += (x[b_idx_2][l_idx])
-            constr_obj_2 += (sl[b_idx][l_idx] - 1)
+            constr_obj_2 += (sl - 1)
             constr_obj_2 *= c[b_idx]
 
             for l_idx_2 in q:
@@ -117,18 +117,19 @@ def model_gs_matching_manytomany(u_b, u_l, c, q, obj_util, lambda_1, lambda_2, L
 
     borrower_matches = {}
     lender_matches = {}
+    print(sl.X)
     for b_idx in c:
         borrower_matches[b_idx] = []
         #print("Borrower {} matched to lenders: ".format(b_idx))
         for l_idx in q:
-            if x[b_idx][l_idx].X == 1:
-                #                 print(l_idx)
+            if x[b_idx][l_idx].X > 0:
                 borrower_matches[b_idx].append(l_idx)
                 if l_idx not in lender_matches:
-                    lender_matches[l_idx] = -1
-                lender_matches[l_idx] = b_idx
+                    lender_matches[l_idx] = []
+                lender_matches[l_idx].append((b_idx, x[b_idx][l_idx].X*q[l_idx]))
 
     return borrower_matches, lender_matches, model.objVal
+
 
 def model_gs_matching_with_fairness(u_b, u_l, c, q, obj_util, fair_constr, lambda_1, lambda_2, lambda_3, LogToConsole=True, TimeLimit=60):
     model = Model()

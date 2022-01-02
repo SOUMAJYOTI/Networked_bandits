@@ -14,11 +14,13 @@ def gs_bandit_method_baseline(u_b, u_l, c, q, lambda_1, lambda_2):
             obj[b_idx][l_idx] = u[l_idx][b_idx]  # objective fn utility same as lender-borrower utility
 
     try:
-        borrower_matches_optimal, lender_matches_optimal, objVal = model_gs_matching(u_b, u, c, q, obj, lambda_1,
+        borrower_matches_optimal, lender_matches_optimal, objVal = model_gs_matching_manytomany(u_b, u, c, q, obj, lambda_1,
                                                                                      lambda_2, LogToConsole=False)
     except:
         print("************optimal Soln. not found, trying another configuration.......************")
         borrower_matches_optimal, lender_matches_optimal, objVal = -1, -1, -1
+
+    print( borrower_matches_optimal, lender_matches_optimal)
 
     return borrower_matches_optimal, lender_matches_optimal, objVal
 
