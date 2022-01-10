@@ -4,6 +4,7 @@ from utilities.utility_fns import *
 import copy
 import dill
 
+
 def gs_bandit_method_baseline(u_b, u_l, c, q, lambda_1, lambda_2):
     u = defaultdict(lambda: defaultdict(float))
     obj = defaultdict(lambda: defaultdict(float))
@@ -71,7 +72,7 @@ def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrow
 
         for t in range(1, T + 1):
             # print("Matching time step " + str(t))
-            borrower_matches, lender_matches, objVal = model_gs_matching(u_b, util_send_l, c, q, obj,
+            borrower_matches, lender_matches, objVal = model_gs_matching_manytomany(u_b, util_send_l, c, q, obj,
                                                                          lambda_1, lambda_2, LogToConsole=False)
             if borrower_matches == -1:
                 print("No optimal soln. found !!")
@@ -83,8 +84,7 @@ def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrow
 
             for l_idx in q:
                 if l_idx in lender_matches:
-                    b_match = lender_matches[l_idx]  # matched borrower
-                    arms_ts[l_idx][b_match-1][t-1] += 1
+                    b_matches_list = lender_matches[l_idx]  # matched borrowers
 
                     # find the most preferred borrower for lender l_idx in this step
                     utilmax = -10
@@ -93,19 +93,25 @@ def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrow
                             utilmax = util_send_l[l_idx][b_l]
                             lender_mostpref = b_l
 
-                    if b_match == lender_mostpref:
-                        arms_ts_mostpref[l_idx][b_match-1][t-1] += 1
+                    reward_total = 0
+                    for b_match, frac in b_matches_list:
+                        arms_ts[l_idx][b_match-1][t-1] += 1
 
-                    rewards_list_l[l_idx][b_match].append(
-                        rewards_from_borrower[s_idx][l_idx][b_match][t-1])  # update the reward list for l-b pair
-                    util_send_l[l_idx][b_match] = reward_ucb(rewards_list_l[l_idx][b_match], t)
-                    sum_rewards[l_idx].append(u_l[l_idx][b_match])
+                        if b_match == lender_mostpref:
+                            arms_ts_mostpref[l_idx][b_match-1][t-1] += 1
 
-                    optimal_borrower = lender_matches_optimal[l_idx]
-                    r = t*(u_l[l_idx][optimal_borrower]) - np.sum(sum_rewards[l_idx])
+                        reward_frac = frac * rewards_from_borrower[s_idx][l_idx][b_match][t-1]
+                        rewards_list_l[l_idx][b_match].append(
+                            reward_frac)  # update the reward list for l-b pair
+                        util_send_l[l_idx][b_match] = reward_ucb(rewards_list_l[l_idx][b_match], t)
+                        reward_total += (frac * u_l[l_idx][b_match])
+                        if objective_type == "lenders":
+                            obj[b_match][l_idx] = np.mean(rewards_list_l[l_idx][b_match]) + util_send_l[l_idx][b_match]
 
-                    if objective_type == "lenders":
-                        obj[b_match][l_idx] = np.mean(rewards_list_l[l_idx][b_match]) + util_send_l[l_idx][b_match]
+                    sum_rewards[l_idx].append(reward_total)
+
+                    optimal_util_l = get_rewards_lender(lender_matches_optimal, u_l)
+                    r = t*optimal_util_l - np.sum(sum_rewards[l_idx])
                 else:
                     r = regret_lender_t[l_idx][t - 1][s_idx]
 

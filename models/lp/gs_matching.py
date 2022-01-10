@@ -117,7 +117,7 @@ def model_gs_matching_manytomany(u_b, u_l, c, q, obj_util, lambda_1, lambda_2, L
 
     borrower_matches = {}
     lender_matches = {}
-    print(sl.X)
+    # print(sl.X)
     for b_idx in c:
         borrower_matches[b_idx] = []
         #print("Borrower {} matched to lenders: ".format(b_idx))

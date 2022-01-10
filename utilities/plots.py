@@ -237,5 +237,3 @@ def plot_hmaps():
             plt.subplots_adjust(left=0.18, bottom=0.17, top=0.85, right=0.9)
             plt.savefig("lender_hmap" + str(37) + ".png")
             plt.close()
-
-plot_hmaps()

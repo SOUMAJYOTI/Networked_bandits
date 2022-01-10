@@ -25,6 +25,16 @@ def get_rewards_list_start(n_l, n_b, u_b, num_sims_per_step, T, variance):
     return rewards_from_borrower
 
 
+def get_rewards_lender(lender_matches, u):
+    reward_total = 0
+    for l_idx in u:
+        b_matches_list = lender_matches[l_idx]
+        for b_match, frac in b_matches_list:
+            reward_total += (frac * u[l_idx][b_match])
+
+    return reward_total
+
+
 def rewards(mean, variance):
     return np.random.normal(mean, variance, 1)[0]
 
