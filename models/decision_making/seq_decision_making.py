@@ -21,7 +21,7 @@ def gs_bandit_method_baseline(u_b, u_l, c, q, lambda_1, lambda_2):
         print("************optimal Soln. not found, trying another configuration.......************")
         borrower_matches_optimal, lender_matches_optimal, objVal = -1, -1, -1
 
-    print( borrower_matches_optimal, lender_matches_optimal)
+    # print( borrower_matches_optimal, lender_matches_optimal)
 
     return borrower_matches_optimal, lender_matches_optimal, objVal
 
@@ -77,8 +77,11 @@ def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrow
             if borrower_matches == -1:
                 print("No optimal soln. found !!")
                 for l_idx in q:
-                    r = regret_lender_t[l_idx][t - 1][s_idx]
-                    regret_lender_t[l_idx][t].append(r)
+                    try:
+                        r = regret_lender_t[l_idx][t - 1][s_idx]
+                        regret_lender_t[l_idx][t].append(r)
+                    except:
+                        regret_lender_t[l_idx][t].append(0.)
 
                 continue
 
@@ -104,13 +107,13 @@ def gs_bandit_method_basic(u_b, u_l, c, q, lambda_1, lambda_2, preference_borrow
                         rewards_list_l[l_idx][b_match].append(
                             reward_frac)  # update the reward list for l-b pair
                         util_send_l[l_idx][b_match] = reward_ucb(rewards_list_l[l_idx][b_match], t)
-                        reward_total += (frac * u_l[l_idx][b_match])
+                        reward_total += (reward_frac) # u_l[l_idx][b_match])
                         if objective_type == "lenders":
                             obj[b_match][l_idx] = np.mean(rewards_list_l[l_idx][b_match]) + util_send_l[l_idx][b_match]
 
                     sum_rewards[l_idx].append(reward_total)
 
-                    optimal_util_l = get_rewards_lender(lender_matches_optimal, u_l)
+                    optimal_util_l = get_rewards_lender(lender_matches_optimal, u_b)
                     r = t*optimal_util_l - np.sum(sum_rewards[l_idx])
                 else:
                     r = regret_lender_t[l_idx][t - 1][s_idx]

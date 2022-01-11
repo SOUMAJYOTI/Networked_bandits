@@ -6,7 +6,7 @@ import dill
 
 VARIANCE = 1.0
 NUM_SIMS_PER_STEP = 1
-T = 10000 # horizon, n
+T = 2000 # horizon, n
 SAVE_DIR = "../figures/figure_01_09_0p5_var1/20b_60l"
 
 os.makedirs(SAVE_DIR, exist_ok=True)

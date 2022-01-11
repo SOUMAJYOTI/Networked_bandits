@@ -79,8 +79,8 @@ def model_gs_matching_manytomany(u_b, u_l, c, q, obj_util, lambda_1, lambda_2, L
             x[b_idx][l_idx] = model.addVar(lb=0.0, ub=1.0, vtype=GRB.CONTINUOUS, name=x_name)
             w_name = "w_{}_{}".format(b_idx, l_idx)
             w[b_idx][l_idx] = model.addVar(lb=0.0, ub=1.0, vtype=GRB.BINARY, name=w_name)
-    slack_name = "s_{}_{}"#.format(b_idx, l_idx)
-    sl = model.addVar(lb=0.0001, ub=1.0, vtype=GRB.CONTINUOUS, name=slack_name)
+    # slack_name = "s_{}_{}"#.format(b_idx, l_idx)
+    # sl = model.addVar(lb=0.0001, ub=1.0, vtype=GRB.CONTINUOUS, name=slack_name)
 
     for l_idx in q:
         model.addConstr(quicksum(x[b_idx][l_idx] for b_idx in c) <= 1)
@@ -98,7 +98,7 @@ def model_gs_matching_manytomany(u_b, u_l, c, q, obj_util, lambda_1, lambda_2, L
                 if b_idx != b_idx_2:
                     if u_l[l_idx][b_idx] < u_l[l_idx][b_idx_2]:
                         constr_obj_2 += (x[b_idx_2][l_idx])
-            constr_obj_2 += (sl - 1)
+            # constr_obj_2 += (-1)
             constr_obj_2 *= c[b_idx]
 
             for l_idx_2 in q:
