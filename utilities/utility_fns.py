@@ -4,13 +4,13 @@ from collections import defaultdict
 INFTY = 10.0
 
 
-def lender_utility(l, b, sim_values, amount_lenders, borrower_rates):
-    return (borrower_rates[b]*amount_lenders[l]) / 30 #sim_values[b][l] #
+def lender_utility(l, b, amount_lenders, borrower_rates):
+    return (borrower_rates[b]*amount_lenders[l]) / 1000 #
 
 
 # Risk preference not considered for now
-def borrower_utility(l, b, sim_values, risk_preference):
-    return (sim_values[b][l] + risk_preference[b][l]) / 2.0  # 2.0 is for normalization
+def borrower_utility(l, b, sim_values):
+    return sim_values[b][l]  # 2.0 is for normalization
 
 
 def get_rewards_list_start(n_l, n_b, u_b, num_sims_per_step, T, variance):
@@ -25,12 +25,11 @@ def get_rewards_list_start(n_l, n_b, u_b, num_sims_per_step, T, variance):
     return rewards_from_borrower
 
 
-def get_rewards_lender(lender_matches, u):
+def get_rewards_lender(lender_matches, l_idx, u):
     reward_total = 0
-    for l_idx in u:
-        b_matches_list = lender_matches[l_idx]
-        for b_match, frac in b_matches_list:
-            reward_total += (frac * u[l_idx][b_match])
+
+    for b_match, frac in lender_matches[l_idx]:
+        reward_total += (u[b_match][l_idx])
 
     return reward_total
 

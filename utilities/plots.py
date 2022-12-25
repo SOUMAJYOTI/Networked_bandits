@@ -18,12 +18,12 @@ def plot_lines(regret, u_l, save_dir="."):
 
             time_points.append(np.mean(regret[l_idx][t_idx]))
             diff = np.mean(regret[l_idx][t_idx]) - np.mean(regret[l_idx][1])
-            time_points_ub.append(np.mean(regret[l_idx][t_idx]) + 0.08*diff)
-            time_points_lb.append(np.mean(regret[l_idx][t_idx]) - 0.08*diff)
+            time_points_ub.append(np.mean(regret[l_idx][t_idx]) + np.std(regret[l_idx][t_idx]))
+            time_points_lb.append(np.mean(regret[l_idx][t_idx]) - np.std(regret[l_idx][t_idx]))
 
         x = range(1, len(time_points)+1)
         plt.plot(x, time_points, 'k-', linewidth=3)
-        plt.fill_between(x, time_points_lb, time_points_ub, color='orange')
+        # plt.fill_between(x, time_points_lb, time_points_ub, color='orange')
         # print(max_ub, min_lb)
         # plt.ylim([max_ub + abs(max_ub) , min_lb - abs(min_lb) ])
         plt.xlabel("Time steps", size=20)
